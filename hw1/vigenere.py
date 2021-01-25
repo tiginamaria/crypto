@@ -1,6 +1,3 @@
-from typing import Dict
-
-
 class Vigenere:
 
     def __init__(self, alphabet, key):
