@@ -1,8 +1,6 @@
 class DES:
-    def __init__(self):
-        pass
 
-    # Матрица перестановки сообщения PI
+    # Text initial permutation matrix
     PI = [58, 50, 42, 34, 26, 18, 10, 2,
           60, 52, 44, 36, 28, 20, 12, 4,
           62, 54, 46, 38, 30, 22, 14, 6,
@@ -12,7 +10,7 @@ class DES:
           61, 53, 45, 37, 29, 21, 13, 5,
           63, 55, 47, 39, 31, 23, 15, 7]
 
-    # Обратная матрица перестановки сообщения PI
+    # Inverse text initial permutation matrix
     INV_PI = [40, 8, 48, 16, 56, 24, 64, 32,
               39, 7, 47, 15, 55, 23, 63, 31,
               38, 6, 46, 14, 54, 22, 62, 30,
@@ -22,7 +20,7 @@ class DES:
               34, 2, 42, 10, 50, 18, 58, 26,
               33, 1, 41, 9, 49, 17, 57, 25]
 
-    # Матрица расширения сообщения
+    # Text explosion matrix
     E = [32, 1, 2, 3, 4, 5,
          4, 5, 6, 7, 8, 9,
          8, 9, 10, 11, 12, 13,
@@ -32,7 +30,7 @@ class DES:
          24, 25, 26, 27, 28, 29,
          28, 29, 30, 31, 32, 1]
 
-    # Преобразования сообщения S0 S1 S2 ... S8
+    # Box of 8 substitution matrix S0 S1 S2 ... S8
     S = [
         [[14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7],
          [0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8],
@@ -76,13 +74,13 @@ class DES:
          ]
     ]
 
-    # Перестановка сообщения
+    # Text permutation matrix
     P = [16, 7, 20, 21, 29, 12, 28, 17,
          1, 15, 23, 26, 5, 18, 31, 10,
          2, 8, 24, 14, 32, 27, 3, 9,
          19, 13, 30, 6, 22, 11, 4, 25]
 
-    # Перестановка ключа
+    # Key permutation matrix
     CD = [57, 49, 41, 33, 25, 17, 9,
           1, 58, 50, 42, 34, 26, 18,
           10, 2, 59, 51, 43, 35, 27,
@@ -92,10 +90,10 @@ class DES:
           14, 6, 61, 53, 45, 37, 29,
           21, 13, 5, 28, 20, 12, 4]
 
-    # Матрица сдвига ключа
+    # Key shift matrix
     CD_SHIFT = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 
-    # Матрица выборки битов ключа
+    # Key selection matrix
     SEL = [14, 17, 11, 24, 1, 5, 3, 28,
            15, 6, 21, 10, 23, 19, 12, 4,
            26, 8, 16, 7, 27, 20, 13, 2,
@@ -130,29 +128,66 @@ class DES:
 
             for i in range(16):
                 # Expand right part to match key len: 32 -> 48
-                r1 = self._apply(r, self.E)
-
+                r0 = self._apply(r, self.E)
                 # Xor expanded right part with key: 48 -> 48
                 if is_encrypt:
-                    r1 = self._xor(keys[i], r1)
+                    r0 = self._xor(keys[i], r0)
                 else:
-                    r1 = self._xor(keys[15 - i], r1)
+                    r0 = self._xor(keys[15 - i], r0)
                 # Substitute and compress: 48 -> 32
-                r1 = self._substitute(r1)
+                r0 = self._substitute(r0)
                 # Permute: 32 -> 32
-                r1 = self._apply(r1, self.P)
+                r0 = self._apply(r0, self.P)
                 # Xor with left part: 32 -> 32
-                r1 = self._xor(l, r1)
-
-                l = r
-                r = r1
+                r0 = self._xor(l, r0)
+                # Swap left and right parts
+                l, r = r, r0
             # Merge left and right part: 32 | 32 -> 64
             bits_block = r + l
-            # Permute result: 64 -> 64
+            # Apply inverse permutation : 64 -> 64
             bits_block = self._apply(bits_block, self.INV_PI)
 
             bits += bits_block
         return self._bits_to_text(bits)
+
+    # Return 16 keys of 48 bits from initial key
+    def _gen_keys(self, key):
+        # Get 64 bits of initial key
+        key = key[:8]
+        # Translate key to bits
+        key_bits = self._text_to_bits(key)
+        # Permute key and apply remove control bits: 64 -> 56
+        key_bits = self._apply(key_bits, self.CD)
+        # Split key into parts: 56 -> 28 | 28
+        c, d = self._split(key_bits, 28)
+
+        keys = []
+        for i in range(16):
+            # Shift key part: 28 -> 28
+            c = self._shift(c, self.CD_SHIFT[i])
+            # Shift key part: 28 -> 28
+            d = self._shift(d, self.CD_SHIFT[i])
+            # Merge key part: 28 | 28 -> 56
+            key_bits = c + d
+            # Select key bits: 56 -> 48
+            key_bits = self._apply(key_bits, self.SEL)
+            keys.append(key_bits)
+        return keys
+
+    def _substitute(self, array):
+        # Split bits to 8 blocks of 6 bits
+        blocks = self._split(array, 6)
+        bits = []
+        for k, block in enumerate(blocks):
+            # Merge 1-4 bits and convert to number
+            i = int(str(block[0]) + str(block[5]), 2)
+            # Merge 0 and 5 bits and convert to number
+            j = int(''.join([str(x) for x in block[1:][:-1]]), 2)
+            # Get substitution by pos (i, j)
+            s = self.S[k][i][j]
+            # Convert to 4 bits
+            bits += self._char_to_bits(s, 4)
+        return bits
 
     def _pad(self, text):
         b = 8 - (len(text) % 8)
@@ -188,49 +223,12 @@ class DES:
     def _apply(self, array, matrix):
         return [array[i - 1] for i in matrix]
 
-    # Return 16 keys of 48 bits from initial key 64 bits
-    def _gen_keys(self, key):
-        keys = []
-        key_bits = self._text_to_bits(key)
-
-        # Permute key and apply remove control bits: 64 -> 56
-        key_bits = self._apply(key_bits, self.CD)
-
-        # Split key into parts: 56 -> 28 | 28
-        c, d = self._split(key_bits, 28)
-        for i in range(16):
-            # Shift key part: 28 -> 28
-            c = self._shift(c, self.CD_SHIFT[i])
-            # Shift key part: 28 -> 28
-            d = self._shift(d, self.CD_SHIFT[i])
-            # Merge key part: 28 | 28 -> 56
-            key_bits = c + d
-
-            # Select key bits: 56 -> 48
-            keys.append(self._apply(key_bits, self.SEL))
-        return keys
-
-    def _substitute(self, array):
-        # Split bits to 8 blocks of 6 bits
-        blocks = self._split(array, 6)
-        bits = []
-        for k, block in enumerate(blocks):
-            # Merge 1-4 bits and convert to number
-            i = int(str(block[0]) + str(block[5]), 2)
-            # Merge 0 and 5 bits and convert to number
-            j = int(''.join([str(x) for x in block[1:][:-1]]), 2)
-            # Get substitution by pos (i, j)
-            s = self.S[k][i][j]
-            # Convert to 4 bits
-            bits += self._char_to_bits(s, 4)
-        return bits
-
 
 if __name__ == '__main__':
     d = DES()
-    key = "encryptk"
-    text = "Hello world"
-    code = d.encrypt(key, text)
+    d_key = "encryptk"
+    d_text = "Hello world!!!"
+    code = d.encrypt(d_key, d_text)
     print(code)
-    text = d.decrypt(key, code)
-    print(text)
+    d_text = d.decrypt(d_key, code)
+    print(d_text)
