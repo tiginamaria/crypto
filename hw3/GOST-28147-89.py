@@ -1,5 +1,4 @@
 from crypt_utils import *
-from hw3.crypt_modes import CBC
 
 
 class GOST:
@@ -15,16 +14,31 @@ class GOST:
 
     def encrypt(self, key, text):
         text = pad(text)
-        ctext = self.crypt(key, text, True)
-        return CBC(ctext, 32, key, True)
+        return self.crypt(key, text, True)
 
     def decrypt(self, key, text):
-        ctext = CBC(text, 32, key, False)
-        text = self.crypt(key, ctext, False)
+        text = self.crypt(key, text, False)
         return unpad(text)
+
+    def _CBC(self, text_bits, block_size, iv, is_encode):
+        text_blocks = split(text_bits, block_size)
+        iv = text_to_bits(iv)[:block_size]
+        bits = []
+        if is_encode:
+            for text_block in text_blocks:
+                iv = xor(text_block, iv)
+                bits += iv
+        else:
+            for text_block in text_blocks:
+                bits += xor(text_block, iv)
+                iv = text_block
+        return bits
+
+
 
     def crypt(self, key, text, is_encrypt=True):
         keys = self._gen_keys(key)
+        iv = text_to_bits(key)[:64]
         bits = []
 
         # Split text into blocks of 8 chars
@@ -33,6 +47,9 @@ class GOST:
             # Convert 8 chars to 64 bits
             text_bits = text_to_bits(text_block)
             # Split text block into half: 64 -> 32 | 32
+            if is_encrypt:
+                text_bits = xor(iv, text_bits)
+
             l, r = split(text_bits, 32)
 
             for i in range(32):
@@ -54,7 +71,9 @@ class GOST:
             # Merge left and right part: 32 | 32 -> 64
             bits_block = r + l
 
-            bits += bits_block
+            bits += bits_block if is_encrypt else xor(iv, bits_block)
+            iv = bits_block if is_encrypt else text_bits
+
         return bits_to_text(bits)
 
     # Return 8 keys of 32 bits from initial key
