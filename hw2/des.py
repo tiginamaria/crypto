@@ -1,3 +1,6 @@
+from crypt_utils import *
+
+
 class DES:
 
     # Text initial permutation matrix
@@ -102,81 +105,81 @@ class DES:
            34, 53, 46, 42, 50, 36, 29, 32]
 
     def encrypt(self, key, text):
-        text = self._pad(text)
+        text = pad(text)
         return self.crypt(key, text, True)
 
     def decrypt(self, key, text):
         text = self.crypt(key, text, False)
-        return self._unpad(text)
+        return unpad(text)
 
     def crypt(self, key, text, is_encrypt=True):
         keys = self._gen_keys(key)
         bits = []
 
         # Split text into blocks of 8 chars
-        text_blocks = self._split(text, 8)
+        text_blocks = split(text, 8)
         for text_block in text_blocks:
 
             # Convert 8 chars to 64 bits
-            text_bits = self._text_to_bits(text_block)
+            text_bits = text_to_bits(text_block)
 
             # Permute text block bits: 64 -> 64
-            text_bits = self._apply(text_bits, self.PI)
+            text_bits = apply(text_bits, self.PI)
 
             # Split text block into half: 64 -> 32 | 32
-            l, r = self._split(text_bits, 32)
+            l, r = split(text_bits, 32)
 
             for i in range(16):
                 # Expand right part to match key len: 32 -> 48
-                r0 = self._apply(r, self.E)
+                r0 = apply(r, self.E)
                 # Xor expanded right part with key: 48 -> 48
                 if is_encrypt:
-                    r0 = self._xor(keys[i], r0)
+                    r0 = xor(keys[i], r0)
                 else:
-                    r0 = self._xor(keys[15 - i], r0)
+                    r0 = xor(keys[15 - i], r0)
                 # Substitute and compress: 48 -> 32
                 r0 = self._substitute(r0)
                 # Permute: 32 -> 32
-                r0 = self._apply(r0, self.P)
+                r0 = apply(r0, self.P)
                 # Xor with left part: 32 -> 32
-                r0 = self._xor(l, r0)
+                r0 = xor(l, r0)
                 # Swap left and right parts
                 l, r = r, r0
             # Merge left and right part: 32 | 32 -> 64
             bits_block = r + l
             # Apply inverse permutation : 64 -> 64
-            bits_block = self._apply(bits_block, self.INV_PI)
+            bits_block = apply(bits_block, self.INV_PI)
 
             bits += bits_block
-        return self._bits_to_text(bits)
+        return bits_to_text(bits)
 
     # Return 16 keys of 48 bits from initial key
     def _gen_keys(self, key):
         # Get 64 bits of initial key
         key = key[:8]
         # Translate key to bits
-        key_bits = self._text_to_bits(key)
+        key_bits = text_to_bits(key)
         # Permute key and apply remove control bits: 64 -> 56
-        key_bits = self._apply(key_bits, self.CD)
+        key_bits = apply(key_bits, self.CD)
         # Split key into parts: 56 -> 28 | 28
-        c, d = self._split(key_bits, 28)
+        c, d = split(key_bits, 28)
 
         keys = []
         for i in range(16):
             # Shift key part: 28 -> 28
-            c = self._shift(c, self.CD_SHIFT[i])
+            c = shift(c, self.CD_SHIFT[i])
             # Shift key part: 28 -> 28
-            d = self._shift(d, self.CD_SHIFT[i])
+            d = shift(d, self.CD_SHIFT[i])
             # Merge key part: 28 | 28 -> 56
             key_bits = c + d
             # Select key bits: 56 -> 48
-            key_bits = self._apply(key_bits, self.SEL)
+            key_bits = apply(key_bits, self.SEL)
             keys.append(key_bits)
         return keys
 
     def _substitute(self, array):
         # Split bits to 8 blocks of 6 bits
-        blocks = self._split(array, 6)
+        blocks = split(array, 6)
         bits = []
         for k, block in enumerate(blocks):
             # Merge 1-4 bits and convert to number
@@ -186,42 +189,8 @@ class DES:
             # Get substitution by pos (i, j)
             s = self.S[k][i][j]
             # Convert to 4 bits
-            bits += self._char_to_bits(s, 4)
+            bits += char_to_bits(s, 4)
         return bits
-
-    def _pad(self, text):
-        b = 8 - (len(text) % 8)
-        return text + b * chr(b)
-
-    def _unpad(self, text):
-        b = ord(text[-1])
-        return text[:-b]
-
-    def _text_to_bits(self, text):
-        bits = []
-        for char in text:
-            bits += self._char_to_bits(char, 8)
-        return bits
-
-    def _char_to_bits(self, value, size):
-        bits = (bin(value)[2:] if isinstance(value, int) else bin(ord(value))[2:]).zfill(size)
-        return [int(bit) for bit in bits]
-
-    def _bits_to_text(self, bits):
-        text = ''.join([chr(int(y, 2)) for y in [''.join([str(x) for x in byte]) for byte in self._split(bits, 8)]])
-        return text
-
-    def _split(self, array, n):
-        return [array[i:i + n] for i in range(0, len(array), n)]
-
-    def _shift(self, array, n):
-        return array[n:] + array[:n]
-
-    def _xor(self, a1, a2):
-        return [x ^ y for x, y in zip(a1, a2)]
-
-    def _apply(self, array, matrix):
-        return [array[i - 1] for i in matrix]
 
 
 if __name__ == '__main__':
