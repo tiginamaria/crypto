@@ -197,7 +197,10 @@ if __name__ == '__main__':
     d = DES()
     d_key = "encryptk"
     d_text = "Hello world!!!"
+    print('key:', d_key)
+    print("text:", d_text)
     code = d.encrypt(d_key, d_text)
+    print("encrypted:")
     print(code)
     d_text = d.decrypt(d_key, code)
-    print(d_text)
+    print("decrypted:", d_text)

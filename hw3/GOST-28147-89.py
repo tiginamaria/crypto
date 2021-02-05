@@ -2,7 +2,7 @@ from crypt_utils import *
 
 
 class GOST:
-    # Box of 8 substitution matrix S0 S1 S2 ... S8
+    # Box of 8 shuffle matrix S0 S1 S2 ... S8
     S = [[9, 6, 3, 2, 8, 11, 1, 7, 10, 4, 14, 15, 12, 0, 13, 5],
          [3, 7, 14, 9, 8, 10, 15, 0, 5, 2, 6, 12, 11, 4, 13, 1],
          [14, 4, 6, 2, 11, 3, 13, 8, 12, 15, 5, 10, 0, 7, 1, 9],
@@ -33,8 +33,6 @@ class GOST:
                 bits += xor(text_block, iv)
                 iv = text_block
         return bits
-
-
 
     def crypt(self, key, text, is_encrypt=True):
         keys = self._gen_keys(key)
@@ -85,7 +83,9 @@ class GOST:
         # Split key into parts: 256 -> 8 * | 32 |
         key_blocks = split(key_bits, 32)
 
-        keys = 3 * key_blocks + list(reversed(key_blocks))
+        # Add 3 * key + 1 reversed key
+        keys = 3 * key_blocks
+        keys += list(reversed(key_blocks))
 
         return keys
 
@@ -94,12 +94,10 @@ if __name__ == '__main__':
     g = GOST()
 
     d_key = (5 * "12345678")[:32]
-    d_text = "hello world"
+    d_text = "Hello world123!!!"
     print('key:', d_key)
-    print('input:', d_text)
+    print('text:', d_text)
     code = g.encrypt(d_key, d_text)
-    print('encrypt:', code)
+    print('encrypted:', code)
     d_text = g.decrypt(d_key, code)
-    print('output:', d_text)
-
-
+    print('decrypted:', d_text)
