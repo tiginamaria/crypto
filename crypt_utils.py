@@ -1,11 +1,15 @@
-def pad(text):
-    b = 8 - (len(text) % 8)
-    return text + b * chr(b)
+def pad(text, d=8):
+    b = d - (len(text) % d)
+    return text + b * chr(0)
 
 
-def unpad(text):
+def unpad(text, d=8):
     b = ord(text[-1])
     return text[:-b]
+
+
+def bits_to_int(bits) -> int:
+    return int(''.join([str(x) for x in bits]), 2)
 
 
 def text_to_bits(text) -> []:
