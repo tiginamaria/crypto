@@ -173,7 +173,7 @@ Mul14 = (
 
 class AES:
 
-    def encrypt(self, key, text, nb=4, nk=4, nr=10, padding=False):
+    def encrypt(self, key, text, nb=4, nk=4, nr=10, padding=True):
         if padding:
             text = self.pad(text)
         keys = self._gen_keys(key)
@@ -199,7 +199,7 @@ class AES:
             bits += list(state.reshape(128))
         return bits_to_text(bits)
 
-    def decrypt(self, key, text, nb=4, nk=4, nr=10, padding=False):
+    def decrypt(self, key, text, nb=4, nk=4, nr=10, padding=True):
         keys = self._gen_keys(key)
         bits = []
 
@@ -310,15 +310,13 @@ class AES:
 
     def pad(self, text):
         padding_len = 16 - (len(text) % 16)
-        padding = bytes([padding_len] * padding_len)
-        return text + padding
+        return text + chr(padding_len) * padding_len
 
     def unpad(self, text):
 
-        padding_len = text[-1]
+        padding_len = ord(text[-1])
         assert padding_len > 0
         message, padding = text[:-padding_len], text[-padding_len:]
-        # assert all(p == padding_len for p in padding)
         return message
 
 
@@ -326,7 +324,7 @@ if __name__ == '__main__':
     g = AES()
 
     d_key = (19 * "abcdef")[:16]
-    d_text = "absdnfkgjncndmsj"
+    d_text = "Hello word!!!"
     print('key:', d_key)
     print('text:', d_text)
     code = g.encrypt(d_key, d_text)

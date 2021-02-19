@@ -19,6 +19,10 @@ def text_to_bits(text) -> []:
     return bits
 
 
+def int_to_bits(x, bits):
+    return list(map(int, list(format(x, 'b').zfill(bits))))
+
+
 def char_to_bits(value, size) -> []:
     bits = (bin(value)[2:] if isinstance(value, int) else bin(ord(value))[2:]).zfill(size)
     return [int(bit) for bit in bits]
