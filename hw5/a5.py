@@ -75,7 +75,7 @@ if __name__ == '__main__':
     g = A5()
 
     d_key = 42
-    d_text = "Hello word!!!"
+    d_text = "Hello word!!!123"
     print('key:', d_key)
     print('text:', d_text)
 

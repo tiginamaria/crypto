@@ -324,7 +324,7 @@ if __name__ == '__main__':
     g = AES()
 
     d_key = (19 * "abcdef")[:16]
-    d_text = "Hello word!!!"
+    d_text = "Hello word!!!1234"
     print('key:', d_key)
     print('text:', d_text)
     code = g.encrypt(d_key, d_text)
