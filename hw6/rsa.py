@@ -43,6 +43,7 @@ class RSA:
                 return False
         return True
 
+
     def gen_keys(self, p, q):
         if not (self._is_prime(p) and self._is_prime(q)):
             raise ValueError('Both numbers must be prime.')
@@ -107,10 +108,13 @@ if __name__ == '__main__':
 
     p, q = 3557, 2579
     public, private = rsa.gen_keys(p, q)
-    print(f"Public key: {public}\nPrivate key: {private}")
+    print(f"Public key: {public})")
+    print(f"Private key: {private}")
     text = "Hello word!!!"
+
+    print("Text:", text)
     encrypted_msg = rsa.encrypt(private, text)
-    print(''.join(map(lambda x: str(x), encrypted_msg)))
+    print("Encrypted:", ''.join(map(lambda x: str(x), encrypted_msg)))
 
     decrypted_msg = rsa.decrypt(public, encrypted_msg)
-    print(decrypted_msg)
+    print("Decrypted:", decrypted_msg)
